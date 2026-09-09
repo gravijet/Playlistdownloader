@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly yt-dlp / spotDL update
+
+[Timer]
+OnCalendar=Mon 04:30
+RandomizedDelaySec=30m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

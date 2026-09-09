@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Playlist Downloader</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬇️</text></svg>">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Playlist Downloader<span class="dot">.</span></h1>
+    <p class="sub">YouTube&nbsp;Music &amp; Spotify Playlists als ZIP – mit Tags und Cover.</p>
+  </header>
+
+  <form class="card" id="form" autocomplete="off">
+    <div class="field">
+      <label for="url">Playlist-Link</label>
+      <input type="text" id="url" name="url" spellcheck="false"
+             placeholder="https://music.youtube.com/playlist?list=… oder https://open.spotify.com/playlist/…">
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="format">Format</label>
+        <select id="format" name="format"></select>
+      </div>
+      <button type="submit" class="go" id="submit">Herunterladen</button>
+    </div>
+    <p class="hint">
+      Funktioniert mit Playlists, Alben und einzelnen Titeln von
+      <code>youtube.com</code>, <code>music.youtube.com</code> und <code>open.spotify.com</code>.
+      Spotify-Links müssen öffentlich sein.
+    </p>
+    <div class="error" id="err" hidden></div>
+  </form>
+
+  <div class="jobs" id="jobs"></div>
+
+  <footer id="footer"></footer>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

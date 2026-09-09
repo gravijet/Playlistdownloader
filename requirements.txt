@@ -1,0 +1,8 @@
+# spotdl pins fastapi/uvicorn tightly, so those stay unpinned and are resolved by it.
+fastapi
+uvicorn[standard]
+python-multipart
+itsdangerous
+yt-dlp>=2025.1.1
+spotdl>=4.2.11
+mutagen>=1.47.0
