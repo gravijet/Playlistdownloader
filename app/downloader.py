@@ -152,14 +152,14 @@ def _postprocessors(fmt: dict) -> list[dict]:
     return pps
 
 
-def download_youtube_track(
+def download_youtube_media(
     track: dict,
     index: int,
     dest: Path,
     fmt: dict,
     on_progress: Callable[[float], None],
 ) -> None:
-    """Download one track into `dest`. Raises on failure."""
+    """Download one YouTube item into `dest`. Raises on failure."""
     # `%(title).120B` truncates the *title field* to 120 bytes. Do not use
     # yt-dlp's `trim_file_name`: it slices the whole absolute path, not the name.
     outtmpl = str(dest / f"{index:03d} - %(title).120B.%(ext)s")
@@ -173,15 +173,28 @@ def download_youtube_track(
             on_progress(min(done / total, 1.0))
 
     opts = _base_ydl_opts() | {
-        "format": "bestaudio/best",
         "outtmpl": outtmpl,
-        "writethumbnail": True,
-        "postprocessors": _postprocessors(fmt),
         "progress_hooks": [hook],
         "ignoreerrors": False,   # per-track: we want the exception
         "noplaylist": True,
         "concurrent_fragment_downloads": 4,
     }
+    if fmt["kind"] == "video":
+        # Prefer separately delivered best video/audio, then a pre-muxed file.
+        # ffmpeg creates a broadly compatible MP4 even when the source streams
+        # arrived in different containers.
+        height = int(fmt["height"])
+        opts.update({
+            "format": f"bv*[height<={height}]+ba/b[height<={height}]/bv*+ba/b",
+            "merge_output_format": "mp4",
+            "postprocessors": [{"key": "FFmpegMetadata", "add_metadata": True}],
+        })
+    else:
+        opts.update({
+            "format": "bestaudio/best",
+            "writethumbnail": True,
+            "postprocessors": _postprocessors(fmt),
+        })
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download([track["url"]])
 
@@ -339,12 +352,14 @@ def download_spotify(
 # --------------------------------------------------------------------------- #
 
 _AUDIO_EXTS = {".mp3", ".m4a", ".opus", ".ogg", ".flac", ".wav", ".aac", ".webm"}
+_VIDEO_EXTS = {".mp4", ".mkv", ".webm", ".mov"}
 
 
-def collect_audio_files(dest: Path) -> list[Path]:
+def collect_media_files(dest: Path, kind: str) -> list[Path]:
+    exts = _VIDEO_EXTS if kind == "video" else _AUDIO_EXTS
     return sorted(
         p for p in dest.rglob("*")
-        if p.is_file() and p.suffix.lower() in _AUDIO_EXTS
+        if p.is_file() and p.suffix.lower() in exts
     )
 
 

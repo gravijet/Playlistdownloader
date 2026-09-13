@@ -7,7 +7,8 @@ const submitBtn = $('submit'), errBox = $('err'), jobsBox = $('jobs');
 const STORE_KEY = 'ytdlweb.jobs';
 const POLL_MS = 1500;
 
-let cfg = { max_tracks: 300, ttl_hours: 3 };
+let cfg = { max_tracks: 300, ttl_hours: 3, formats: [] };
+let selectedKind = 'audio';
 let tracked = load();          // [jobId, …], newest first
 const cache = new Map();       // jobId -> last status payload
 let timer = null;
@@ -44,6 +45,23 @@ function showError(msg) {
   errBox.hidden = false;
 }
 
+function formatLabel(key) {
+  return cfg.formats.find((f) => f.key === key)?.label || key;
+}
+
+function fillFormats() {
+  const previous = fmtSelect.value;
+  const choices = cfg.formats.filter((f) => f.kind === selectedKind);
+  fmtSelect.replaceChildren();
+  for (const f of choices) {
+    const o = document.createElement('option');
+    o.value = f.key;
+    o.textContent = f.label;
+    o.selected = f.key === previous || (!previous && f.key === cfg.default_format);
+    fmtSelect.appendChild(o);
+  }
+}
+
 /* -------------------------------------------------------------- rendering */
 
 const LABELS = {
@@ -76,14 +94,17 @@ function card(j) {
   title.textContent = j.playlist_title || j.url;
   const meta = document.createElement('div');
   meta.className = 'job-meta';
+  const unit = j.format.startsWith('video-') ? 'Videos' : 'Titel';
   meta.textContent = j.total_tracks
-    ? `${j.completed_tracks} / ${j.total_tracks} Titel · ${j.format}`
-    : j.format;
+    ? `${j.completed_tracks} / ${j.total_tracks} ${unit} · ${formatLabel(j.format)}`
+    : formatLabel(j.format);
   left.append(title, meta);
 
   const badge = document.createElement('span');
   badge.className = `badge ${j.source === 'spotify' ? 'sp' : 'yt'}`;
-  badge.textContent = j.source === 'spotify' ? 'Spotify' : 'YouTube';
+  badge.textContent = j.source === 'spotify'
+    ? 'Spotify'
+    : (j.format.startsWith('video-') ? 'YouTube · Video' : 'YouTube');
 
   head.append(left, badge);
 
@@ -230,8 +251,18 @@ form.addEventListener('submit', async (e) => {
     showError('Server nicht erreichbar.');
   } finally {
     submitBtn.disabled = false;
-    submitBtn.textContent = 'Herunterladen';
+    submitBtn.innerHTML = '<span>Download starten</span><b>↓</b>';
   }
+});
+
+document.querySelectorAll('input[name="kind"]').forEach((input) => {
+  input.addEventListener('change', () => {
+    selectedKind = input.value;
+    document.querySelectorAll('.mode-option').forEach((el) => {
+      el.classList.toggle('active', el.querySelector('input').checked);
+    });
+    fillFormats();
+  });
 });
 
 (async function init() {
@@ -239,13 +270,7 @@ form.addEventListener('submit', async (e) => {
     const r = await fetch('/api/config');
     if (r.status === 401) { location.reload(); return; }
     cfg = await r.json();
-    for (const f of cfg.formats) {
-      const o = document.createElement('option');
-      o.value = f.key;
-      o.textContent = f.label;
-      if (f.key === cfg.default_format) o.selected = true;
-      fmtSelect.appendChild(o);
-    }
+    fillFormats();
     $('footer').textContent =
       `Max. ${cfg.max_tracks} Titel pro Playlist · fertige ZIPs werden nach ${cfg.ttl_hours} h gelöscht`;
   } catch { /* keep defaults */ }

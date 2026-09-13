@@ -1,7 +1,8 @@
 # Playlist Downloader
 
-Webapp, die YouTube-/YouTube-Music- und Spotify-Playlists als ZIP-Archiv
-ausliefert — mit ID3-Tags und eingebettetem Cover.
+Webapp, die YouTube-/YouTube-Music- und Spotify-Playlists als Audio-ZIP-Archiv
+ausliefert — mit ID3-Tags und eingebettetem Cover. YouTube- und YouTube-Music-
+Links können zusätzlich als Video-ZIP (bis 1080p) heruntergeladen werden.
 
 Läuft auf <https://yt.benjaminberger.at>.
 
@@ -25,12 +26,16 @@ fertig geworden.
 
 | Quelle | Werkzeug | Weg |
 | --- | --- | --- |
-| YouTube, YouTube Music | yt-dlp (Python-API, Track für Track) | direkt |
+| YouTube, YouTube Music | yt-dlp (Python-API, Track für Track) | Audio oder Video direkt |
 | Spotify | spotDL (Subprozess) | Metadaten von der Spotify-API, Audio von YouTube Music |
 
 Spotify gibt keine Audiodaten heraus; spotDL liest dort nur die Trackliste und
 sucht die Titel anschließend auf YouTube Music. Deshalb kann das Ergebnis
 gelegentlich ein anderes Master oder eine Liveversion sein.
+
+Video ist daher bewusst nur für YouTube und YouTube Music verfügbar. Es wird
+als bestmögliche Kombination aus Video und Audio bis zur gewählten Höhe geladen
+und als ZIP gepackt.
 
 yt-dlp wird pro Track einzeln aufgerufen. Ein gesperrtes oder gelöschtes Video
 bricht damit nicht die ganze Playlist ab, sondern landet als „übersprungen" in
@@ -107,8 +112,8 @@ plötzlich gar nichts mehr lädt.
 | Methode | Pfad | Zweck |
 | --- | --- | --- |
 | `POST` | `/api/login` | `{"password": "…"}` → Session-Cookie |
-| `GET` | `/api/config` | Formate und Limits |
-| `POST` | `/api/jobs` | `{"url": "…", "format": "mp3-320"}` → Job |
+| `GET` | `/api/config` | Formate, Medienart und Limits |
+| `POST` | `/api/jobs` | `{"url": "…", "format": "mp3-320"}` oder `{"url": "…", "format": "video-1080"}` → Job |
 | `GET` | `/api/jobs/{id}` | Status und Fortschritt |
 | `POST` | `/api/jobs/{id}/cancel` | Abbrechen |
 | `DELETE` | `/api/jobs/{id}` | Job und Dateien löschen |

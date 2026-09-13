@@ -155,7 +155,8 @@ async def get_config(request: Request) -> JSONResponse:
     require_auth(request)
     return JSONResponse({
         "formats": [
-            {"key": k, "label": v["label"]} for k, v in config.AUDIO_FORMATS.items()
+            {"key": k, "label": v["label"], "kind": v["kind"]}
+            for k, v in config.DOWNLOAD_FORMATS.items()
         ],
         "default_format": config.DEFAULT_FORMAT,
         "max_tracks": config.MAX_TRACKS,

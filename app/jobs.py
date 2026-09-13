@@ -143,8 +143,12 @@ class JobManager:
     def submit(self, url: str, fmt_key: str) -> Job:
         url = downloader.normalise_url(url)
         source = downloader.detect_source(url)
-        if fmt_key not in config.AUDIO_FORMATS:
+        if fmt_key not in config.DOWNLOAD_FORMATS:
             fmt_key = config.DEFAULT_FORMAT
+        if source == "spotify" and config.DOWNLOAD_FORMATS[fmt_key]["kind"] == "video":
+            raise RuntimeError(
+                "Video-Downloads sind nur für YouTube- und YouTube-Music-Links verfügbar."
+            )
 
         if self.active_count() >= config.MAX_QUEUED_JOBS:
             raise RuntimeError(
@@ -189,7 +193,7 @@ class JobManager:
     def _run(self, job: Job) -> None:
         try:
             job.check_cancelled()
-            fmt = config.AUDIO_FORMATS[job.fmt_key]
+            fmt = config.DOWNLOAD_FORMATS[job.fmt_key]
             if job.source == "youtube":
                 self._run_youtube(job, fmt)
             else:
@@ -236,7 +240,7 @@ class JobManager:
                 job.current_track_progress = frac
 
             try:
-                downloader.download_youtube_track(
+                downloader.download_youtube_media(
                     track, i, job.files_dir, fmt, on_progress
                 )
             except downloader.yt_dlp.utils.DownloadError as exc:
@@ -298,7 +302,7 @@ class JobManager:
         job.current_track = ""
 
         downloader.cleanup_partials(job.files_dir)
-        files = downloader.collect_audio_files(job.files_dir)
+        files = downloader.collect_media_files(job.files_dir, fmt["kind"])
         if not files:
             raise RuntimeError(
                 "Es konnte kein einziger Titel geladen werden. "
@@ -308,14 +312,15 @@ class JobManager:
         base = downloader.safe_name(job.playlist_title, fallback=f"playlist-{job.id[:6]}")
         size = downloader.make_zip(files, job.files_dir, job.zip_path)
 
-        job.zip_name = f"{base}.zip"
+        suffix = "-video" if fmt["kind"] == "video" else ""
+        job.zip_name = f"{base}{suffix}.zip"
         job.zip_size = size
         job.completed_tracks = len(files)
         job.status = DONE
         job.finished_at = time.time()
         ok = len(files)
         job.message = (
-            f"Fertig: {ok} Titel"
+            f"Fertig: {ok} {'Videos' if fmt['kind'] == 'video' else 'Titel'}"
             + (f", {len(job.failed_tracks)} übersprungen" if job.failed_tracks else "")
         )
         # The audio files are only needed for the zip.

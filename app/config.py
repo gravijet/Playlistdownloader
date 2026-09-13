@@ -48,13 +48,17 @@ COOKIES_FILE = DATA_DIR / "cookies.txt"
 SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID", "").strip()
 SPOTIFY_CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET", "").strip()
 
-# Audio formats offered in the UI, mapped to yt-dlp / spotDL settings.
-AUDIO_FORMATS = {
-    "mp3-320": {"label": "MP3 · 320 kbps", "codec": "mp3", "quality": "320", "ext": "mp3"},
-    "mp3-192": {"label": "MP3 · 192 kbps", "codec": "mp3", "quality": "192", "ext": "mp3"},
-    "mp3-128": {"label": "MP3 · 128 kbps", "codec": "mp3", "quality": "128", "ext": "mp3"},
-    "m4a": {"label": "M4A · AAC (Original)", "codec": "m4a", "quality": "0", "ext": "m4a"},
-    "opus": {"label": "Opus (klein & gut)", "codec": "opus", "quality": "0", "ext": "opus"},
-    "flac": {"label": "FLAC (verlustfrei*)", "codec": "flac", "quality": "0", "ext": "flac"},
+# Output formats offered in the UI. Video is intentionally limited to YouTube
+# sources: Spotify exposes metadata and audio tracks, but no downloadable video.
+DOWNLOAD_FORMATS = {
+    "mp3-320": {"label": "MP3 · 320 kbps", "kind": "audio", "codec": "mp3", "quality": "320", "ext": "mp3"},
+    "mp3-192": {"label": "MP3 · 192 kbps", "kind": "audio", "codec": "mp3", "quality": "192", "ext": "mp3"},
+    "mp3-128": {"label": "MP3 · 128 kbps", "kind": "audio", "codec": "mp3", "quality": "128", "ext": "mp3"},
+    "m4a": {"label": "M4A · AAC (Original)", "kind": "audio", "codec": "m4a", "quality": "0", "ext": "m4a"},
+    "opus": {"label": "Opus (klein & gut)", "kind": "audio", "codec": "opus", "quality": "0", "ext": "opus"},
+    "flac": {"label": "FLAC (verlustfrei*)", "kind": "audio", "codec": "flac", "quality": "0", "ext": "flac"},
+    "video-1080": {"label": "Video · bis 1080p", "kind": "video", "height": 1080, "ext": "mp4"},
+    "video-720": {"label": "Video · bis 720p", "kind": "video", "height": 720, "ext": "mp4"},
+    "video-480": {"label": "Video · bis 480p", "kind": "video", "height": 480, "ext": "mp4"},
 }
 DEFAULT_FORMAT = "mp3-320"
