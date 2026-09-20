@@ -453,6 +453,18 @@ def resolve_spotify(
     is reused and this whole slow subprocess is skipped entirely. A miss or
     any doubt falls straight through to the full resolve below, so this can
     only make a repeat download faster, never wrong.
+
+    The `spotdl save` subprocess itself is retried (config.RESOLVE_RETRIES,
+    same knob the YouTube listing retry uses) if it exits without producing
+    a save file: spotDL's Spotify API backend (spotapi, unofficial/reverse
+    engineered) occasionally returns an empty or malformed body — confirmed
+    live as a bare `JSONDecodeError`/`AlbumError: Could not get album info`
+    killing an otherwise-fine, perfectly public playlist/artist outright.
+    Re-running from scratch after a short backoff is what actually recovers
+    it. Not retried when the process was killed by a signal (negative
+    `returncode`) — that means Cancel, not a transient hiccup, and should
+    fail fast so `check_cancelled()` below can turn it into a clean
+    cancellation instead of quietly starting another expensive subprocess.
     """
     save_file = workdir / "tracks.spotdl"
     resource = _spotify_resource(url)
@@ -473,15 +485,24 @@ def resolve_spotify(
         "--log-level", "ERROR",
         "--simple-tui",
     ]
-    proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=str(workdir)
-    )
-    if on_start is not None:
-        on_start(proc)
-    stdout, _ = proc.communicate()
-    if not save_file.is_file():
+    tail = "keine Ausgabe"
+    for attempt in range(1, config.RESOLVE_RETRIES + 1):
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=str(workdir)
+        )
+        if on_start is not None:
+            on_start(proc)
+        stdout, _ = proc.communicate()
+        if save_file.is_file():
+            break
+        if (proc.returncode or 0) < 0:
+            break  # killed by Cancel — fail fast, see docstring above
         detail = (stdout or "").strip().splitlines()
         tail = " ".join(detail[-3:]) if detail else "keine Ausgabe"
+        if attempt < config.RESOLVE_RETRIES:
+            time.sleep(config.RESOLVE_RETRY_DELAY * attempt)
+
+    if not save_file.is_file():
         raise RuntimeError(f"Spotify-Playlist konnte nicht gelesen werden: {tail}")
 
     data = json.loads(save_file.read_text(encoding="utf-8"))

@@ -249,6 +249,77 @@ class DownloadsTest(unittest.TestCase):
         popen.assert_called_once()
         self.assertEqual(tracks, [{"title": "Artist – New", "duration": 2}])
 
+    def test_resolve_spotify_retries_transient_save_failure_then_recovers(self):
+        # spotDL's Spotify API backend (spotapi, unofficial/reverse
+        # engineered) occasionally comes back with an empty/malformed body
+        # and crashes `spotdl save` outright for an otherwise-fine playlist —
+        # confirmed live as a bare JSONDecodeError/AlbumError. A retry from
+        # scratch is what actually recovers it.
+        real_id = "3TVXtAsR1Inumwj472S9r4"
+        url = f"https://open.spotify.com/playlist/{real_id}"
+        workdir = Path(self.tmp.name)
+
+        class FailProc:
+            returncode = 1
+
+            def communicate(self):
+                return ("AlbumError: Could not get album info", None)
+
+        class OkProc:
+            returncode = 0
+
+            def communicate(self):
+                (workdir / "tracks.spotdl").write_text(json.dumps(
+                    [{"name": "Song", "artists": ["Artist"], "duration": 1, "list_name": "Liste"}]
+                ))
+                return ("", None)
+
+        with patch.multiple(config, RESOLVE_RETRIES=3, RESOLVE_RETRY_DELAY=0), \
+                patch.object(downloader, "_spotify_fingerprint", return_value=None), \
+                patch.object(downloader.subprocess, "Popen", side_effect=[FailProc(), OkProc()]) as popen:
+            title, tracks, save_file = downloader.resolve_spotify(url, workdir)
+        self.assertEqual(popen.call_count, 2)
+        self.assertEqual(tracks, [{"title": "Artist – Song", "duration": 1}])
+
+    def test_resolve_spotify_raises_after_exhausting_save_retries(self):
+        real_id = "3TVXtAsR1Inumwj472S9r4"
+        url = f"https://open.spotify.com/playlist/{real_id}"
+        workdir = Path(self.tmp.name)
+
+        class FailProc:
+            returncode = 1
+
+            def communicate(self):
+                return ("AlbumError: Could not get album info", None)
+
+        with patch.multiple(config, RESOLVE_RETRIES=2, RESOLVE_RETRY_DELAY=0), \
+                patch.object(downloader, "_spotify_fingerprint", return_value=None), \
+                patch.object(downloader.subprocess, "Popen", side_effect=[FailProc(), FailProc()]) as popen:
+            with self.assertRaises(RuntimeError):
+                downloader.resolve_spotify(url, workdir)
+        self.assertEqual(popen.call_count, 2)
+
+    def test_resolve_spotify_does_not_retry_when_process_was_killed(self):
+        # A negative returncode means the process died to a signal (Cancel's
+        # SIGTERM/SIGKILL escalation, see jobs.py), not a transient API
+        # hiccup — must fail fast instead of starting another subprocess.
+        real_id = "3TVXtAsR1Inumwj472S9r4"
+        url = f"https://open.spotify.com/playlist/{real_id}"
+        workdir = Path(self.tmp.name)
+
+        class KilledProc:
+            returncode = -15
+
+            def communicate(self):
+                return ("", None)
+
+        with patch.multiple(config, RESOLVE_RETRIES=3, RESOLVE_RETRY_DELAY=0), \
+                patch.object(downloader, "_spotify_fingerprint", return_value=None), \
+                patch.object(downloader.subprocess, "Popen", return_value=KilledProc()) as popen:
+            with self.assertRaises(RuntimeError):
+                downloader.resolve_spotify(url, workdir)
+        popen.assert_called_once()
+
     def test_parallel_tracks_keep_order_and_skip_failed_output(self):
         job = self.job()
         tracks = [{"title": str(i), "url": str(i)} for i in range(3)]
