@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Anmelden · Playlist Downloader</title>
-<link rel="stylesheet" href="/static/style.css?v=video">
+<link rel="stylesheet" href="/static/style.css?v=20260920b">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔒</text></svg>">
 </head>
 <body>
 <div class="login-wrap">
   <div class="login-box">
-    <h1>Playlist Downloader<span class="dot">.</span></h1>
+    <h1>Downloader</h1>
     <p class="sub">Diese Instanz ist passwortgeschützt.</p>
     <form class="card" id="login">
       <label for="pw">Passwort</label>
-      <input type="password" id="pw" autocomplete="current-password" autofocus>
+      <input type="password" id="pw" autocomplete="current-password" required autofocus>
       <button type="submit">Anmelden</button>
-      <div class="error" id="err" hidden></div>
+      <div class="error" id="err" role="alert" hidden></div>
     </form>
   </div>
 </div>

@@ -24,6 +24,11 @@ def _int(name: str, default: int) -> int:
 DATA_DIR = Path(os.environ.get("YTDLWEB_DATA_DIR", "/var/lib/ytdlweb"))
 JOBS_DIR = DATA_DIR / "jobs"
 
+# Per-browser download history (small JSON file per owner id), kept separate
+# from JOBS_DIR because it survives long after the job's files are reaped.
+HISTORY_DIR = DATA_DIR / "history"
+HISTORY_LIMIT = _int("YTDLWEB_HISTORY_LIMIT", 200)
+
 # Optional shared password gating the whole app. Empty string disables the gate.
 APP_PASSWORD = os.environ.get("YTDLWEB_PASSWORD", "").strip()
 
@@ -32,10 +37,38 @@ APP_PASSWORD = os.environ.get("YTDLWEB_PASSWORD", "").strip()
 SECRET_KEY = os.environ.get("YTDLWEB_SECRET_KEY") or secrets.token_urlsafe(32)
 
 # Guard rails.
-MAX_TRACKS = _int("YTDLWEB_MAX_TRACKS", 300)
+MAX_TRACKS = _int("YTDLWEB_MAX_TRACKS", 5000)
 MAX_CONCURRENT_JOBS = _int("YTDLWEB_MAX_CONCURRENT_JOBS", 2)
+TRACK_WORKERS = max(1, min(_int("YTDLWEB_TRACK_WORKERS", 3), 6))
+# spotDL's own concurrency for searching/downloading/converting tracks. Was
+# fixed at 3; now that IPv6-triggered search crashes are fixed (see
+# downloader._spotdl_base_cmd), more tracks in flight at once no longer just
+# means more crash-and-retry storms.
+SPOTIFY_THREADS = max(1, min(_int("YTDLWEB_SPOTIFY_THREADS", 6), 12))
 MAX_QUEUED_JOBS = _int("YTDLWEB_MAX_QUEUED_JOBS", 20)
-JOB_TTL_HOURS = _int("YTDLWEB_JOB_TTL_HOURS", 3)
+JOB_TTL_HOURS = _int("YTDLWEB_JOB_TTL_HOURS", 24)
+
+# A failed YouTube track is retried this many times (in total) before it is
+# given up on and marked as skipped, with a short pause between attempts.
+TRACK_RETRIES = max(1, _int("YTDLWEB_TRACK_RETRIES", 4))
+TRACK_RETRY_DELAY = _int("YTDLWEB_TRACK_RETRY_DELAY", 4)
+
+# spotDL's own per-track retry count (search + download on YouTube Music).
+SPOTDL_MAX_RETRIES = _int("YTDLWEB_SPOTDL_MAX_RETRIES", 5)
+
+# A channel/playlist listing that comes back with gaps (yt-dlp swallows a
+# transient page-fetch error, e.g. a 403 mid-pagination, under ignoreerrors
+# and turns the whole failed page into missing entries instead of raising —
+# see downloader.resolve_youtube) is retried this many times from scratch
+# before giving up, with a growing pause between attempts.
+RESOLVE_RETRIES = max(1, _int("YTDLWEB_RESOLVE_RETRIES", 3))
+RESOLVE_RETRY_DELAY = _int("YTDLWEB_RESOLVE_RETRY_DELAY", 5)
+
+# Cache of resolved Spotify playlist/album/artist track lists, so a repeat
+# download of the same (unchanged) link skips spotDL's slow metadata fetch
+# entirely. One small JSON file per resource; see downloader._spotify_cache*.
+SPOTIFY_CACHE_DIR = DATA_DIR / "spotify_cache"
+SPOTIFY_CACHE_TTL_DAYS = _int("YTDLWEB_SPOTIFY_CACHE_TTL_DAYS", 14)
 
 # Datacentre IPv6 ranges are blocked by YouTube far more aggressively than IPv4,
 # so downloads go out over v4 unless explicitly turned off.

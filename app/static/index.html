@@ -4,69 +4,69 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Playlist Downloader</title>
-<link rel="stylesheet" href="/static/style.css?v=video">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬇️</text></svg>">
+<title>YouTube Downloader</title>
+<link rel="stylesheet" href="/static/style.css?v=20260920b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23b52c25'/%3E%3Cpath d='M16 7v16m-6-6 6 6 6-6' fill='none' stroke='white' stroke-width='3'/%3E%3C/svg%3E">
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow"><span class="pulse"></span> Dein persönlicher Medien-Downloader</div>
-    <h1>Alles, was du hören<br><em>und sehen willst.</em></h1>
-    <p class="sub">Öffentliche YouTube-, YouTube-Music- und Spotify-Links als ordentliches ZIP-Archiv.</p>
+    <div class="brand"><span class="brand-mark" aria-hidden="true">↓</span> Downloader</div>
+    <h1>YouTube als MP3.</h1>
+    <p class="sub">Link einfügen, herunterladen. Einzelne Titel als Datei, Playlists als ZIP.</p>
   </header>
 
   <form class="card" id="form" autocomplete="off">
-    <div class="form-topline">
-      <div>
-        <span class="section-kicker">Neuer Download</span>
-        <h2>Link einfügen</h2>
-      </div>
-      <span class="secure">Privat &amp; temporär</span>
-    </div>
-    <div class="field link-field">
-      <label for="url">Playlist, Album oder einzelner Titel</label>
-      <div class="input-shell">
-        <span aria-hidden="true">↗</span>
-        <input type="text" id="url" name="url" spellcheck="false"
-               placeholder="YouTube-, YouTube Music- oder Spotify-Link einfügen">
-      </div>
-    </div>
-    <fieldset class="download-mode">
-      <legend>Was möchtest du herunterladen?</legend>
-      <label class="mode-option active">
-        <input type="radio" name="kind" value="audio" checked>
-        <span class="mode-icon">♫</span>
-        <span><strong>Audio</strong><small>MP3, M4A, FLAC &amp; mehr</small></span>
-      </label>
-      <label class="mode-option">
-        <input type="radio" name="kind" value="video">
-        <span class="mode-icon">▶</span>
-        <span><strong>Video</strong><small>Nur YouTube &amp; YouTube Music</small></span>
-      </label>
-    </fieldset>
+    <label for="url">YouTube- oder Spotify-Link</label>
+    <input type="text" id="url" name="url" inputmode="url" spellcheck="false"
+           autocapitalize="none" required aria-describedby="link-hint"
+           placeholder="https://www.youtube.com/watch?v=…">
+    <p class="hint" id="link-hint">Auch YouTube-Kanäle, YouTube Music, Playlists, Spotify-Alben und -Künstler.</p>
     <div class="row controls">
       <div class="field">
         <label for="format">Format &amp; Qualität</label>
-        <select id="format" name="format"></select>
+        <select id="format" name="format">
+          <option value="mp3-320">MP3 · 320 kbps</option>
+          <option value="mp3-192">MP3 · 192 kbps</option>
+          <option value="mp3-128">MP3 · 128 kbps</option>
+        </select>
       </div>
-      <button type="submit" class="go" id="submit"><span>Download starten</span><b>↓</b></button>
+      <button type="submit" class="go" id="submit">Download starten <span aria-hidden="true">↓</span></button>
     </div>
-    <p class="hint">
-      Audio funktioniert mit allen unterstützten Quellen. Video gibt es für YouTube und YouTube Music.
-      Spotify-Links müssen öffentlich sein.
-    </p>
-    <div class="error" id="err" hidden></div>
+    <details class="options">
+      <summary>Weitere Formate &amp; Video</summary>
+      <fieldset class="download-mode">
+        <legend>Medienart</legend>
+        <label class="mode-option"><input type="radio" name="kind" value="audio" checked> Audio</label>
+        <label class="mode-option"><input type="radio" name="kind" value="video"> Video</label>
+      </fieldset>
+      <p class="hint">Video ist für YouTube und YouTube Music verfügbar. Einzelne Downloads werden im gewählten Format gespeichert; Playlists, Alben, Kanäle und Künstler als ZIP.</p>
+    </details>
+    <div class="error" id="err" role="alert" hidden></div>
   </form>
 
-  <div class="source-strip" aria-label="Unterstützte Quellen">
-    <span>Unterstützt</span><b>YouTube</b><b>YouTube Music</b><b>Spotify</b>
-  </div>
+  <section class="downloads" aria-labelledby="downloads-title">
+    <div class="section-heading">
+      <h2 id="downloads-title">Downloads</h2>
+      <span id="job-count"></span>
+    </div>
+    <p class="empty" id="empty">Noch keine Downloads. Füge oben einen Link ein.</p>
+    <div class="jobs" id="jobs"></div>
+    <p class="sr-only" id="announcement" role="status" aria-live="polite"></p>
+  </section>
 
-  <div class="jobs" id="jobs"></div>
-
-  <footer id="footer"></footer>
+  <section class="downloads" aria-labelledby="history-title">
+    <div class="section-heading">
+      <h2 id="history-title">Verlauf</h2>
+    </div>
+    <div id="history">
+      <p class="hint" id="history-loading">Lädt…</p>
+      <p class="empty" id="history-empty" hidden>Noch keine abgeschlossenen Downloads.</p>
+      <div class="jobs" id="history-list"></div>
+    </div>
+  </section>
+  <footer id="footer">MP3 für einzelne Titel · ZIP für Playlists und Alben</footer>
 </div>
-<script src="/static/app.js?v=video"></script>
+<script src="/static/app.js?v=20260920b"></script>
 </body>
 </html>
